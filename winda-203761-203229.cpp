@@ -3,6 +3,12 @@
 
 #include "framework.h"
 #include "winda-203761-203229.h"
+#include <windows.h>
+#include <objidl.h>
+#include <gdiplus.h>
+
+#pragma comment(lib, "gdiplus.lib")
+using namespace Gdiplus;
 
 #define MAX_LOADSTRING 100
 
@@ -24,6 +30,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+
+    ULONG_PTR gdiplusToken;
+    GdiplusStartupInput gdiplusStartupInput;
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     // TODO: Place code here.
 
@@ -52,6 +63,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    GdiplusShutdown(gdiplusToken);
     return (int) msg.wParam;
 }
 
@@ -111,6 +123,63 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+static void DrawLevitatingPerson(Graphics& g, int x, int y) {
+    Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
+
+    // Head
+    g.DrawEllipse(&pen, x, y, 20, 20); // head circle
+
+    int cx = x + 10; // center of the head
+    int top = y + 20;
+
+    // Body
+    g.DrawLine(&pen, Point(cx, top), Point(cx, top + 25)); // torso
+
+    // Arms (folded, optional)
+    g.DrawLine(&pen, Point(cx - 10, top + 10), Point(cx + 10, top + 10));
+
+    // Legs cross-legged: draw an "X" under the body
+    g.DrawLine(&pen, Point(cx - 10, top + 25), Point(cx + 10, top + 35));
+    g.DrawLine(&pen, Point(cx + 10, top + 25), Point(cx - 10, top + 35));
+
+    // Levitation shadow
+    SolidBrush brush(Color(100, 0, 0, 0)); // semi-transparent
+    g.FillEllipse(&brush, x, y + 50, 20, 5); // shadow
+}
+
+
+static void wholeshaft(Graphics& g, int lewygoraX, int lewygoraY, int szer_pros, int wys_pros){
+
+    Pen pen(Color(0, 0, 0), 2);
+
+    //prostokat(poruszanie sie windy)
+    g.DrawRectangle(&pen, lewygoraX, 0.6 * lewygoraY, szer_pros, 1.25 * wys_pros);
+
+    //rysowanie poziomow windy
+
+    // Linie poziome wychodz¹ce z ka¿dego piêtra po obu stronach
+
+    //LEWA
+    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + 0.2 * wys_pros), Point(lewygoraX, lewygoraY + 0.2 * wys_pros));
+    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + 0.6 * wys_pros), Point(lewygoraX, lewygoraY + 0.6 * wys_pros));
+    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + wys_pros), Point(lewygoraX, lewygoraY + wys_pros));
+
+    //PRAWA
+    g.DrawLine(&pen, Point(lewygoraX + szer_pros, lewygoraY + 0.4 * wys_pros), Point(1.8 * lewygoraX + szer_pros, lewygoraY + 0.4 * wys_pros));
+    g.DrawLine(&pen, Point(lewygoraX + szer_pros, lewygoraY + 0.8 * wys_pros), Point(1.8 * lewygoraX + szer_pros, lewygoraY + 0.8 * wys_pros));
+
+}
+
+static void innershaft(Graphics& g, int lewygoraX, int lewygoraY, int szer_wind, int wys_wind)
+{
+    Pen pen(Color(255, 0, 0), 1);
+
+    //prostokat (winda)
+    g.DrawRectangle(&pen, lewygoraX + 3, lewygoraY, szer_wind - 7, wys_wind);
+}
+
+
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -146,6 +215,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
+
+            Graphics graphics(hdc);
+
+            wholeshaft(graphics, 50, 50, 80, 200);
+            innershaft(graphics, 50, 50, 80, 40);
+            DrawLevitatingPerson(graphics, 10, 10);
+
+
+
+
+
+
             // TODO: Add any drawing code that uses hdc here...
             EndPaint(hWnd, &ps);
         }
