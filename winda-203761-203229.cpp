@@ -123,6 +123,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+int current = 1;
+const int allfloors = 5;
+const int floorheight = 100;
+int destination = 5;
+bool direction = true; //true - going up, false - going down
+
+
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
 
@@ -148,36 +155,82 @@ static void DrawLevitatingPerson(Graphics& g, int x, int y) {
 }
 
 
-static void wholeshaft(Graphics& g, int lewygoraX, int lewygoraY, int szer_pros, int wys_pros){
+static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pros){
 
-    Pen pen(Color(0, 0, 0), 2);
+    Pen pen(Color(135, 0, 0, 0), 2);//proba zmiany alpha
 
-    //prostokat(poruszanie sie windy)
-    g.DrawRectangle(&pen, lewygoraX, 0.6 * lewygoraY, szer_pros, 1.25 * wys_pros);
+    const float bottomPadding = 0.25f * wys_pros;  // space below 1st floor
+    const float topPadding = 0.1f * wys_pros;
+    
+    RECT shaft;
+    shaft.left = (client.right / 2 - szer_pros / 2);
+    shaft.right = (client.right / 2 + szer_pros / 2);
+    shaft.top = (client.bottom / 2 - wys_pros / 2);
+    shaft.bottom = (client.bottom / 2 + wys_pros / 2);
+    
+    // Convert RECT coordinates and sizes to float
+    float shaftLeft = static_cast<float>(shaft.left);
+    float shaftTop = static_cast<float>(shaft.top) - topPadding;
+    float shaftBottom = (client.bottom / 2.0f + wys_pros / 2.0f) + bottomPadding;
+    float shaftHeight = static_cast<float>(shaftBottom - shaftTop);
 
-    //rysowanie poziomow windy
+    // Draw shaft rectangle using RectF
+    RectF shaftRect(shaftLeft, shaftTop, szer_pros, shaftHeight);
+    g.DrawRectangle(&pen, shaftRect);
 
-    // Linie poziome wychodz¹ce z ka¿dego piêtra po obu stronach
+    // Set pen color for floor lines
+    pen.SetColor(Color(175, 110, 175, 250)); // baby blue
 
-    //LEWA
-    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + 0.2 * wys_pros), Point(lewygoraX, lewygoraY + 0.2 * wys_pros));
-    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + 0.6 * wys_pros), Point(lewygoraX, lewygoraY + 0.6 * wys_pros));
-    g.DrawLine(&pen, Point(0.2 * lewygoraX, lewygoraY + wys_pros), Point(lewygoraX, lewygoraY + wys_pros));
+    // Draw left horizontal lines (floors)
+    g.DrawLine(&pen,
+        PointF(0.2f * shaftLeft, shaftTop + 0.2f * shaftHeight),
+        PointF(shaftLeft, shaftTop + 0.2f * shaftHeight));
 
-    //PRAWA
-    g.DrawLine(&pen, Point(lewygoraX + szer_pros, lewygoraY + 0.4 * wys_pros), Point(1.8 * lewygoraX + szer_pros, lewygoraY + 0.4 * wys_pros));
-    g.DrawLine(&pen, Point(lewygoraX + szer_pros, lewygoraY + 0.8 * wys_pros), Point(1.8 * lewygoraX + szer_pros, lewygoraY + 0.8 * wys_pros));
+    g.DrawLine(&pen,
+        PointF(0.2f * shaftLeft, shaftTop + 0.6f * shaftHeight),
+        PointF(shaftLeft, shaftTop + 0.6f * shaftHeight));
+
+    g.DrawLine(&pen,
+        PointF(0.2f * shaftLeft, shaftTop + shaftHeight),
+        PointF(shaftLeft, shaftTop + shaftHeight));
+
+    // Draw right horizontal lines (floors)
+    g.DrawLine(&pen,
+        PointF(shaftLeft + szer_pros, shaftTop + 0.4f * shaftHeight),
+        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.4f * shaftHeight));
+
+    g.DrawLine(&pen,
+        PointF(shaftLeft + szer_pros, shaftTop + 0.8f * shaftHeight),
+        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.8f * shaftHeight));
+
 
 }
 
-static void innershaft(Graphics& g, int lewygoraX, int lewygoraY, int szer_wind, int wys_wind)
-{
-    Pen pen(Color(255, 0, 0), 1);
+static void innershaft(Graphics& g, RECT client, int szer_wind, int wys_wind){
+    
+    Pen pen(Color(200,230, 155, 175), 1);
+
+    int liftx = client.right / 2 - 100;
+    int liftbasey = (client.bottom / 2) + 250 - 125; //trzeba uwzglednic to, ze 1 pietro jest na wysokosci wys_pros a caly shaft ma 1,25 wys_pros, wiec 0,25wys_pros jest puste pod winda
+    //                                           ^podloga windy - 0,25wys_pros
+    int lifty = liftbasey - (current-1) * 100; // 100 - wysokosc innershaft
+
 
     //prostokat (winda)
-    g.DrawRectangle(&pen, lewygoraX + 3, lewygoraY, szer_wind - 7, wys_wind);
+    g.DrawRectangle(&pen, liftx + 3, lifty + 1, szer_wind - 7, wys_wind);
 }
 
+static void movement(Graphics& g, RECT liftcoords) {
+    if (destination < 1 || destination > 5) {
+        DWORD err = GetLastError(); //poprawic zeby wyswietlalo blad, ze za duzy floor, to tylko testowe bo potem beda dzialay buttonsy tylko wiec nie bedzie problemu z inputem zlego pietra
+    }
+    else {
+        int liftx = liftcoords.right / 2 - 100;
+        int liftbasey = (liftcoords.bottom/2) + 250 - 125; //trzeba uwzglednic to, ze 1 pietro jest na wysokosci wys_pros a caly shaft ma 1,25 wys_pros, wiec 0,25wys_pros jest puste pod winda
+        // ^podloga windy - 0,25wys_pros
+        int lifty = liftbasey - (current-1) * 100; // 100 - wysokosc innershaft
+    }
+}
 
 
 //
@@ -188,8 +241,10 @@ static void innershaft(Graphics& g, int lewygoraX, int lewygoraY, int szer_wind,
 //  WM_COMMAND  - process the application menu
 //  WM_PAINT    - Paint the main window
 //  WM_DESTROY  - post a quit message and return
+//  WM_CREATE   - handling the timer - my addition
+//  WM_TIMER    - for animation purposes - my addition
 //
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -218,8 +273,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             Graphics graphics(hdc);
 
-            wholeshaft(graphics, 50, 50, 80, 200);
-            innershaft(graphics, 50, 50, 80, 40);
+            LONG xleft = 0, xright = 0, ytop = 0, ybottom = 0;
+            RECT winrect;
+
+            if (GetClientRect(hWnd, &winrect)) { //aby dostac coordinates okna dialogowego do pointera lpRect
+
+                xleft = winrect.left; //chyba zawsze 0, mozna pominac
+                xright = winrect.right;
+                ytop = winrect.top; //to tez zawsze 0, mozna pominac
+                ybottom = winrect.bottom;
+            }
+            else {
+                DWORD err = GetLastError();
+            }
+
+
+            wholeshaft(graphics,winrect, 200, 500);
+            innershaft(graphics, winrect, 200, 100);
             DrawLevitatingPerson(graphics, 10, 10);
 
 
@@ -231,7 +301,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+    
+    case WM_CREATE:
+        SetTimer(hWnd, 1, 1000, NULL);
+        return 0;
+    case WM_TIMER:
+        if (wParam == 1) { // Timer ID
+            if (direction && current < destination) {
+                current++;
+                if (current == destination) direction = false;
+            }
+            else if (!direction && current >= destination) {
+                current--;
+            }
+
+            InvalidateRect(hWnd, NULL, TRUE); // Trigger repaint
+        }
+        break;
     case WM_DESTROY:
+        KillTimer(hWnd, 1);
         PostQuitMessage(0);
         break;
     default:
