@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <objidl.h>
 #include <gdiplus.h>
+#include <queue>
 
 #pragma comment(lib, "gdiplus.lib")
 using namespace Gdiplus;
@@ -128,7 +129,25 @@ const int allfloors = 5;
 const int floorheight = 100;
 int destination = 5;
 bool direction = true; //true - going up, false - going down
+HWND globalHwnd;
 
+HWND floorButtons[5][4];
+//buttons
+const int buttonWidth = 40;
+const int buttonHeight = 25;
+const int startX = 20;      // Starting x for buttons
+const int startY = 100;     // Starting y, adjust to match your UI
+const int floorSpacing = 100; // Vertical space between floors
+const int buttonSpacing = 50; // Horizontal space between buttons
+const WCHAR* buttonLabels[6] = { L"1", L"2", L"3", L"4", L"5" };
+
+struct ButtonInfo {
+    int id;
+    int targetFloor;
+};
+
+ButtonInfo buttons[20];
+int structindex = 0;
 
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
@@ -159,7 +178,7 @@ static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pr
 
     Pen pen(Color(135, 0, 0, 0), 2);//proba zmiany alpha
 
-    const float bottomPadding = 0.25f * wys_pros;  // space below 1st floor
+    const float bottomPadding = 0.15f * wys_pros;  // space below 1st floor
     const float topPadding = 0.1f * wys_pros;
     
     RECT shaft;
@@ -170,9 +189,11 @@ static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pr
     
     // Convert RECT coordinates and sizes to float
     float shaftLeft = static_cast<float>(shaft.left);
-    float shaftTop = static_cast<float>(shaft.top) - topPadding;
-    float shaftBottom = (client.bottom / 2.0f + wys_pros / 2.0f) + bottomPadding;
+    float shaftTop = static_cast<float>(shaft.top);
+    float shaftBottom = (client.bottom / 2.0f + wys_pros / 2.0f);
     float shaftHeight = static_cast<float>(shaftBottom - shaftTop);
+
+    float space = static_cast<float>(shaftHeight - topPadding - bottomPadding); // space between uppermost and lowest floor
 
     // Draw shaft rectangle using RectF
     RectF shaftRect(shaftLeft, shaftTop, szer_pros, shaftHeight);
@@ -183,25 +204,25 @@ static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pr
 
     // Draw left horizontal lines (floors)
     g.DrawLine(&pen,
-        PointF(0.2f * shaftLeft, shaftTop + 0.2f * shaftHeight),
-        PointF(shaftLeft, shaftTop + 0.2f * shaftHeight));
+        PointF(0.2f * shaftLeft, shaftTop + 0.2f * space + topPadding),
+        PointF(shaftLeft, shaftTop + 0.2f * space + topPadding));
 
     g.DrawLine(&pen,
-        PointF(0.2f * shaftLeft, shaftTop + 0.6f * shaftHeight),
-        PointF(shaftLeft, shaftTop + 0.6f * shaftHeight));
+        PointF(0.2f * shaftLeft, shaftTop + 0.6f * space + topPadding),
+        PointF(shaftLeft, shaftTop + 0.6f * space + topPadding));
 
     g.DrawLine(&pen,
-        PointF(0.2f * shaftLeft, shaftTop + shaftHeight),
-        PointF(shaftLeft, shaftTop + shaftHeight));
+        PointF(0.2f * shaftLeft, shaftTop + space + topPadding),
+        PointF(shaftLeft, shaftTop + space + topPadding));
 
     // Draw right horizontal lines (floors)
     g.DrawLine(&pen,
-        PointF(shaftLeft + szer_pros, shaftTop + 0.4f * shaftHeight),
-        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.4f * shaftHeight));
+        PointF(shaftLeft + szer_pros, shaftTop + 0.4f * space + topPadding),
+        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.4f * space + topPadding));
 
     g.DrawLine(&pen,
-        PointF(shaftLeft + szer_pros, shaftTop + 0.8f * shaftHeight),
-        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.8f * shaftHeight));
+        PointF(shaftLeft + szer_pros, shaftTop + 0.8f * space + topPadding),
+        PointF(1.8f * shaftLeft + szer_pros, shaftTop + 0.8f * space + topPadding));
 
 
 }
@@ -210,25 +231,43 @@ static void innershaft(Graphics& g, RECT client, int szer_wind, int wys_wind){
     
     Pen pen(Color(200,230, 155, 175), 1);
 
-    int liftx = client.right / 2 - 100;
-    int liftbasey = (client.bottom / 2) + 250 - 125; //trzeba uwzglednic to, ze 1 pietro jest na wysokosci wys_pros a caly shaft ma 1,25 wys_pros, wiec 0,25wys_pros jest puste pod winda
-    //                                           ^podloga windy - 0,25wys_pros
-    int lifty = liftbasey - (current-1) * 100; // 100 - wysokosc innershaft
+    const float bottomPadding = 0.15f * wys_wind * 5;  // space below 1st floor
+    const float topPadding = 0.1f * wys_wind * 5;
+
+    int liftx = client.right / 2 - 100; //zmienuic na szer_wind/2 (?)
+    int liftbasey = (5 * wys_wind - bottomPadding); // 5*wyswind - bottom padding to linia dolna lewa                        
+    int lifty = liftbasey - (current-1) * 0.2f * (5 * wys_wind - topPadding - bottomPadding); // 100 - wysokosc innershaft
 
 
     //prostokat (winda)
-    g.DrawRectangle(&pen, liftx + 3, lifty + 1, szer_wind - 7, wys_wind);
+    g.DrawRectangle(&pen, liftx + 3, lifty, szer_wind - 7, wys_wind);
 }
 
-static void movement(Graphics& g, RECT liftcoords) {
-    if (destination < 1 || destination > 5) {
-        DWORD err = GetLastError(); //poprawic zeby wyswietlalo blad, ze za duzy floor, to tylko testowe bo potem beda dzialay buttonsy tylko wiec nie bedzie problemu z inputem zlego pietra
+static void movement(int floor) {
+    if (floor < 1 || floor > 5) {
+        return;
     }
-    else {
-        int liftx = liftcoords.right / 2 - 100;
-        int liftbasey = (liftcoords.bottom/2) + 250 - 125; //trzeba uwzglednic to, ze 1 pietro jest na wysokosci wys_pros a caly shaft ma 1,25 wys_pros, wiec 0,25wys_pros jest puste pod winda
-        // ^podloga windy - 0,25wys_pros
-        int lifty = liftbasey - (current-1) * 100; // 100 - wysokosc innershaft
+    else { 
+        destination = floor;
+        //debug msg
+        wchar_t buf[100];
+        swprintf_s(buf, 100, L"Movement called with destination floor: %d\n", floor);
+        OutputDebugString(buf);
+
+       if(current!=destination)
+           SetTimer(globalHwnd, 1, 1000, NULL);
+
+        if (current < destination) {
+            direction = true;  // Moving up
+        }
+        else if (current > destination) {
+            direction = false; // Moving down
+        }
+
+        
+
+
+        if (current == destination) return;
     }
 }
 
@@ -252,17 +291,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
+
+            wchar_t buf[100];
+            wsprintf(buf, L"Button %d clicked\n", wmId);
+            OutputDebugString(buf);
+
+
+            //floor buttons
+            if (wmId >= 100 && wmId <= 143)
             {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
+                for (int i = 0; i < structindex; ++i)
+                {
+                    if (buttons[i].id == wmId)
+                    {
+                        int destFloor = buttons[i].targetFloor;
+                        movement(destFloor); // your movement function
+                        break;
+                    }
+                }
+            }
+            else {
+
+
+                // Parse the menu selections:
+                switch (wmId)
+                {
+                case IDM_ABOUT:
+                    DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                    break;
+                case IDM_EXIT:
+                    DestroyWindow(hWnd);
+                    break;
+                default:
+                    return DefWindowProc(hWnd, message, wParam, lParam);
+                }
             }
         }
         break;
@@ -302,17 +364,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     
-    case WM_CREATE:
+    case WM_CREATE:        
+        globalHwnd = hWnd;
         SetTimer(hWnd, 1, 1000, NULL);
-        return 0;
+
+        for (int floor = 0; floor < 5; ++floor)
+        {
+            int btnindex = 0;
+
+            for (int b = 0; b < 5; ++b)
+            {
+                if (b == floor) continue;
+
+                int x = startX + btnindex * (buttonWidth + 10);
+                int y = startY + (4-floor) * floorSpacing;
+
+                
+                int btnID = 100 + floor * 10 + btnindex; // Unique ID for each button
+
+                floorButtons[floor][b] = CreateWindow(
+                    L"BUTTON",
+                    buttonLabels[b],
+                    WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                    x, y,
+                    buttonWidth, buttonHeight,
+                    hWnd,
+                    (HMENU)(INT_PTR)btnID,
+                    (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE),
+                    NULL
+                );
+
+                buttons[structindex++] = {btnID, b+1};                
+
+                btnindex++;
+            }
+        }
+
+
+
+        break;
     case WM_TIMER:
         if (wParam == 1) { // Timer ID
             if (direction && current < destination) {
                 current++;
-                if (current == destination) direction = false;
             }
-            else if (!direction && current >= destination) {
+            else if (!direction && current > destination) {
                 current--;
+            }
+
+            if (current == destination) {
+                KillTimer(hWnd, 1);  // Stop the movement
             }
 
             InvalidateRect(hWnd, NULL, TRUE); // Trigger repaint
