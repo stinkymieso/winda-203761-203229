@@ -124,10 +124,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+//global declarations
+
 int current = 1;
 const int allfloors = 5;
 const int floorheight = 100;
-int destination = 5;
+int destination = 1;
 bool direction = true; //true - going up, false - going down
 HWND globalHwnd;
 
@@ -148,6 +150,9 @@ struct ButtonInfo {
 
 ButtonInfo buttons[20];
 int structindex = 0;
+
+std::queue<int> floorQueue;
+bool peopleWaiting[5] = { false };
 
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
@@ -305,6 +310,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (buttons[i].id == wmId)
                     {
                         int destFloor = buttons[i].targetFloor;
+                        peopleWaiting[destFloor] = true;
+
                         movement(destFloor); // your movement function
                         break;
                     }
@@ -352,7 +359,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             wholeshaft(graphics,winrect, 200, 500);
             innershaft(graphics, winrect, 200, 100);
-            DrawLevitatingPerson(graphics, 10, 10);
+            for (int floor = 0; floor < 5; floor++) {
+                if (peopleWaiting[floor]) {
+                    DrawLevitatingPerson(graphics, 10, 10);
+                }
+                    
+            }
+            
 
 
 
