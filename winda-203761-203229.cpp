@@ -126,6 +126,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 //global declarations
 
+int globalspacing;
+int globalright;
+int globalbottom;
+
 int current = 1;
 const int allfloors = 5;
 const int floorheight = 100;
@@ -154,8 +158,20 @@ struct ButtonInfo {
 ButtonInfo buttons[20];
 int structindex = 0;
 
+//starting with the queues
 std::queue<int> floorQueue;
 bool peopleWaiting[5] = { false };
+
+//drawing people
+struct Person {
+    int floor;
+    int x;
+    int y;
+    bool moving;
+};
+
+Person people[50];
+int peoplecount = 0;
 
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
@@ -310,15 +326,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             //floor buttons
             if (wmId >= 100 && wmId <= 143)
             {
-                for (int i = 0; i < structindex; ++i)
+                for (int i = 0; i < structindex; i++)
                 {
                     if (buttons[i].id == wmId)
                     {
                         int destFloor = buttons[i].targetFloor;
                         int fromFloor = buttons[i].fromFloor;
-                        peopleWaiting[destFloor] = true;
+                        peopleWaiting[fromFloor-1] = true;
 
-                        movement(fromFloor, destFloor); // your movement function
+                        
+                        //people[peoplecount].floor = fromFloor - 1;
+                        //people[peoplecount].x = ((fromFloor - 1) % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
+                        //people[peoplecount].y = globalbottom / 2 - 250 + 50 + 10 + (4 - (fromFloor - 1)) * (int)(0.2f * globalspacing);
+                        //people[peoplecount].moving = true;
+                        //peoplecount++;
+
+                        movement(fromFloor, destFloor); 
+                        //peopleWaiting[fromFloor] = false;
                         break;
                     }
                 }
@@ -361,13 +385,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else {
                 DWORD err = GetLastError();
             }
-
+            int space = 500 - 50 - 75; // wys_pros - 0.1wys_pros - 0.15wys_pros CHCE TYLKO OMINAC FLOATING POINT BO NIE CHCE JUZ ZMIENIAC DrawLevitatingPerson() PLS
+            globalspacing = space;
+            globalright = (int)xright;
+            globalbottom = (int)ybottom;
 
             wholeshaft(graphics,winrect, 200, 500);
             innershaft(graphics, winrect, 200, 100);
             for (int floor = 0; floor < 5; floor++) {
-                if (peopleWaiting[floor]) {
-                    DrawLevitatingPerson(graphics, 10, 10);
+                if (peopleWaiting[floor]) {   
+
+                    int y = ybottom/2 - 250 + 50 + 10 + (4-floor) * 0.2 * space; //50=0.1wyspros = topPadding, 250 = 0.5wyspros, ybottom/2 = srodek w pionie, 10 = offest, zeby lewitowali troche nizej nad podloga hehe 
+                    int x;
+                    
+                    if (floor % 2 == 0) {
+                       x = xright / 2 - 250 - 100;
+                    }
+                    else {
+                        x = xright / 2 + 250 + 100;
+                    }
+
+                    DrawLevitatingPerson(graphics, x, y);
+
+                    /*for (int i = 0; i < peoplecount; ++i) {
+                        DrawLevitatingPerson(graphics, people[i].x, people[i].y);
+                    }*/
+
+                    wchar_t buf[100];
+                    swprintf_s(buf, 100, L"Person added to floor: %d\n", floor+1);
+                    OutputDebugString(buf);
+
+                    //peopleWaiting[floor] = false;
                 }
                     
             }
@@ -394,8 +442,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             for (int b = 0; b < 5; ++b)
             {
                 if (b == floor) continue;
-
-                int x = startX + btnindex * (buttonWidth + 10);
+                int x;
+                if (floor % 2 == 0) {
+                    x = startX + btnindex * (buttonWidth + 10);
+                }
+                else {
+                    x = startX + btnindex * (buttonWidth + 10) + 1200;
+                }
+                
                 int y = startY + (4-floor) * floorSpacing;
 
                 
@@ -430,6 +484,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else if (!direction && current > destination) {
                 current--;
             }
+
+            /*for (int i = 0; i < peoplecount; ++i) {
+                if (people[i].moving) {
+                    int targetX = globalright / 2;  // Shaft center
+
+                    // Move step-by-step
+                    if (people[i].x > targetX) people[i].x -= 5;
+                    else if (people[i].x < targetX) people[i].x += 5;
+                    else people[i].moving = false;  // Reached shaft
+
+                    wchar_t buf[200];
+                    swprintf_s(buf, 200, L"Window size: right = %d, bottom = %d, spacing = %d\n", globalright, globalbottom, globalspacing);
+                    OutputDebugString(buf);
+
+
+                    wchar_t dbg[100];
+                    swprintf_s(dbg, 100, L"Person %d pos: (%d, %d)\n", i, people[i].x, people[i].y);
+                    OutputDebugString(dbg);
+                }
+                else {
+                    // reached shaft
+                    for (int j = i; j < peoplecount - 1; ++j)
+                        people[j] = people[j + 1];
+                    peoplecount--;
+                    i--;  // So the next person isn't skipped
+                }
+            }*/
+
 
             if (current == destination) {
                 if (pickupFloor != -1) {
