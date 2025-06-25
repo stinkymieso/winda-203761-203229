@@ -157,6 +157,8 @@ int structindex = 0;
 std::queue<int> floorQueue;
 bool peopleWaiting[5] = { false };
 
+std::queue<int> requestQueue;
+
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
 
@@ -318,7 +320,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         int fromFloor = buttons[i].fromFloor;
                         peopleWaiting[destFloor] = true;
 
-                        movement(fromFloor, destFloor); // your movement function
+                        requestQueue.push(fromFloor*10 + destFloor);
+                        wchar_t tyf[100];
+                        wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
+                        OutputDebugString(tyf);
+                        if (requestQueue.size() == 1) {
+                            movement(fromFloor, destFloor);
+                        }// your movement function
                         break;
                     }
                 }
@@ -441,7 +449,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
                 else {
                     // Done
-                    KillTimer(hWnd, 1);
+                    if (requestQueue.empty()) {
+                        KillTimer(hWnd, 1);
+                    }
+                    else {
+                        if (requestQueue.size() > 1) { requestQueue.pop(); }
+                        int code = requestQueue.front();
+                        requestQueue.pop();
+                        int from = code / 10;
+                        int to = code % 10;
+                        movement(from, to);
+                    }
                 }
             }
 
@@ -477,3 +495,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+//AAAAAAAAAAAAAAAAAAAA
