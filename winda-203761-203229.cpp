@@ -132,6 +132,8 @@ const int floorheight = 100;
 int destination = 1;
 bool direction = true; //true - going up, false - going down
 HWND globalHwnd;
+int pickupFloor = -1;
+int dropoffFloor = -1;
 
 HWND floorButtons[5][4];
 //buttons
@@ -146,6 +148,7 @@ const WCHAR* buttonLabels[6] = { L"1", L"2", L"3", L"4", L"5" };
 struct ButtonInfo {
     int id;
     int targetFloor;
+    int fromFloor;
 };
 
 ButtonInfo buttons[20];
@@ -248,32 +251,34 @@ static void innershaft(Graphics& g, RECT client, int szer_wind, int wys_wind){
     g.DrawRectangle(&pen, liftx + 3, lifty, szer_wind - 7, wys_wind);
 }
 
-static void movement(int floor) {
-    if (floor < 1 || floor > 5) {
-        return;
+static void movement(int fromFloor, int toFloor) {
+    if (fromFloor < 1 || fromFloor > 5 || toFloor < 1 || toFloor > 5) return;
+
+    if (current != fromFloor) {
+        pickupFloor = fromFloor;
+        dropoffFloor = toFloor;
+        destination = pickupFloor;
     }
-    else { 
-        destination = floor;
-        //debug msg
-        wchar_t buf[100];
-        swprintf_s(buf, 100, L"Movement called with destination floor: %d\n", floor);
-        OutputDebugString(buf);
-
-       if(current!=destination)
-           SetTimer(globalHwnd, 1, 1000, NULL);
-
-        if (current < destination) {
-            direction = true;  // Moving up
-        }
-        else if (current > destination) {
-            direction = false; // Moving down
-        }
-
-        
-
-
-        if (current == destination) return;
+    else {
+        // Already at pickup, go to drop-off
+        destination = toFloor;
+        pickupFloor = -1; // Clear pickup
+        dropoffFloor = toFloor;
     }
+
+    // Set direction
+    if (current < destination)
+        direction = true;
+    else if (current > destination)
+        direction = false;
+
+    // Start the movement
+    SetTimer(globalHwnd, 1, 1000, NULL);
+
+    // Debug
+    wchar_t buf[100];
+    swprintf_s(buf, 100, L"Movement queued/called: floor %d\n", toFloor);
+    OutputDebugString(buf);
 }
 
 
@@ -310,9 +315,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (buttons[i].id == wmId)
                     {
                         int destFloor = buttons[i].targetFloor;
+                        int fromFloor = buttons[i].fromFloor;
                         peopleWaiting[destFloor] = true;
 
-                        movement(destFloor); // your movement function
+                        movement(fromFloor, destFloor); // your movement function
                         break;
                     }
                 }
@@ -407,7 +413,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     NULL
                 );
 
-                buttons[structindex++] = {btnID, b+1};                
+                buttons[structindex++] = {btnID, b+1, floor+1};                
 
                 btnindex++;
             }
@@ -426,7 +432,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
 
             if (current == destination) {
-                KillTimer(hWnd, 1);  // Stop the movement
+                if (pickupFloor != -1) {
+                    // Arrived at pickup, go to drop-off
+                    destination = dropoffFloor;
+                    pickupFloor = -1;
+
+                    direction = (destination > current);
+                }
+                else {
+                    // Done
+                    KillTimer(hWnd, 1);
+                }
             }
 
             InvalidateRect(hWnd, NULL, TRUE); // Trigger repaint
