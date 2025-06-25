@@ -7,6 +7,7 @@
 #include <objidl.h>
 #include <gdiplus.h>
 #include <queue>
+#include <algorithm>
 
 #pragma comment(lib, "gdiplus.lib")
 using namespace Gdiplus;
@@ -305,6 +306,72 @@ static void movement(int fromFloor, int toFloor) {
 //  WM_TIMER    - for animation purposes - my addition
 //
 
+std::queue<int> betterQueue(std::queue<int> queue, int id) {
+    std::queue<int> newQueue;
+    if (queue.empty()) {
+        queue.push(id);
+        return queue;
+    }
+    else
+    {
+        int id1, id2, id3;
+        if (id / 10 < id % 10) { //jazda w góre
+            while (!queue.empty()) {
+                if ((queue.front() / 10 < queue.front() % 10) && queue.front() / 10 != id / 10 && queue.front() % 10 != id % 10) {
+                    int floors[4];
+                    floors[0] = queue.front() / 10;
+                    floors[1] = queue.front() % 10;
+                    floors[2] = (int)(id / 10);
+                    floors[3] = id % 10;
+                    std::sort(&floors[0], &floors[3]);
+                    id1 = floors[0] * 10 + floors[1];
+                    id2 = floors[1] * 10 + floors[2];
+                    id3 = floors[2] * 10 + floors[3];
+                    newQueue.push(id1);
+                    newQueue.push(id2);
+                    newQueue.push(id3);
+                    queue.pop();
+                    while (!queue.empty()) {
+                        newQueue.push(queue.front());
+                        queue.pop();
+                    }
+                    return newQueue;
+                }
+                newQueue.push(queue.front());
+                queue.pop();
+            }
+            return newQueue;
+        }
+        else if (id / 10 > id % 10) { // jazda w dó³
+            while (!queue.empty()) {
+                if ((queue.front() / 10 > queue.front() % 10) && queue.front() / 10 != id / 10 && queue.front() % 10 != id % 10) {
+                    int floors[4];
+                    floors[0] = queue.front() / 10;
+                    floors[1] = queue.front() % 10;
+                    floors[2] = id / 10;
+                    floors[3] = id % 10;
+                    std::sort(&floors[0], &floors[3]);
+                    id1 = floors[3] * 10 + floors[2];
+                    id2 = floors[2] * 10 + floors[1];
+                    id3 = floors[1] * 10 + floors[0];
+                    newQueue.push(id1);
+                    newQueue.push(id2);
+                    newQueue.push(id3);
+                    queue.pop();
+                    while (!queue.empty()) {
+                        newQueue.push(queue.front());
+                        queue.pop();
+                    }
+                    return newQueue;
+                }
+                newQueue.push(queue.front());
+                queue.pop();
+            }
+            return newQueue;
+        }
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -338,7 +405,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
                     //peopleWaiting[fromFloor] = false;
-                    requestQueue.push(fromFloor * 10 + destFloor);
+                    requestQueue = betterQueue(requestQueue, fromFloor * 10 + destFloor);
                     wchar_t tyf[100];
                     wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
                     OutputDebugString(tyf);
