@@ -175,6 +175,8 @@ struct Person {
 Person people[50];
 int peoplecount = 0;
 
+std::queue<int> requestQueue;
+
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
 
@@ -308,123 +310,130 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_COMMAND:
+    {
+        int wmId = LOWORD(wParam);
+
+        wchar_t buf[100];
+        wsprintf(buf, L"Button %d clicked\n", wmId);
+        OutputDebugString(buf);
+
+
+        //floor buttons
+        if (wmId >= 100 && wmId <= 143)
         {
-            int wmId = LOWORD(wParam);
-
-            wchar_t buf[100];
-            wsprintf(buf, L"Button %d clicked\n", wmId);
-            OutputDebugString(buf);
-
-
-            //floor buttons
-            if (wmId >= 100 && wmId <= 143)
+            for (int i = 0; i < structindex; i++)
             {
-                for (int i = 0; i < structindex; i++)
+                if (buttons[i].id == wmId)
                 {
-                    if (buttons[i].id == wmId)
-                    {
-                        int destFloor = buttons[i].targetFloor;
-                        int fromFloor = buttons[i].fromFloor;
-                        peopleWaiting[fromFloor-1] = true;
-
-                        
-                        //people[peoplecount].floor = fromFloor - 1;
-                        //people[peoplecount].x = ((fromFloor - 1) % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
-                        //people[peoplecount].y = globalbottom / 2 - 250 + 50 + 10 + (4 - (fromFloor - 1)) * (int)(0.2f * globalspacing);
-                        //people[peoplecount].moving = true;
-                        //peoplecount++;
-
-                        movement(fromFloor, destFloor); 
-                        //peopleWaiting[fromFloor] = false;
-                        break;
-                    }
-                }
-            }
-            else {
+                    int destFloor = buttons[i].targetFloor;
+                    int fromFloor = buttons[i].fromFloor;
+                    peopleWaiting[fromFloor - 1] = true;
 
 
-                // Parse the menu selections:
-                switch (wmId)
-                {
-                case IDM_ABOUT:
-                    DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                    //people[peoplecount].floor = fromFloor - 1;
+                    //people[peoplecount].x = ((fromFloor - 1) % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
+                    //people[peoplecount].y = globalbottom / 2 - 250 + 50 + 10 + (4 - (fromFloor - 1)) * (int)(0.2f * globalspacing);
+                    //people[peoplecount].moving = true;
+                    //peoplecount++;
+
+
+                    //peopleWaiting[fromFloor] = false;
+                    requestQueue.push(fromFloor * 10 + destFloor);
+                    wchar_t tyf[100];
+                    wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
+                    OutputDebugString(tyf);
+                    if (requestQueue.size() == 1) {
+                        movement(fromFloor, destFloor);
+                    }// your movement function
                     break;
-                case IDM_EXIT:
-                    DestroyWindow(hWnd);
-                    break;
-                default:
-                    return DefWindowProc(hWnd, message, wParam, lParam);
                 }
             }
         }
-        break;
+        else {
+
+
+            // Parse the menu selections:
+            switch (wmId)
+            {
+            case IDM_ABOUT:
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                break;
+            case IDM_EXIT:
+                DestroyWindow(hWnd);
+                break;
+            default:
+                return DefWindowProc(hWnd, message, wParam, lParam);
+            }
+        }
+    }
+    break;
     case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
 
-            Graphics graphics(hdc);
+        Graphics graphics(hdc);
 
-            LONG xleft = 0, xright = 0, ytop = 0, ybottom = 0;
-            RECT winrect;
+        LONG xleft = 0, xright = 0, ytop = 0, ybottom = 0;
+        RECT winrect;
 
-            if (GetClientRect(hWnd, &winrect)) { //aby dostac coordinates okna dialogowego do pointera lpRect
+        if (GetClientRect(hWnd, &winrect)) { //aby dostac coordinates okna dialogowego do pointera lpRect
 
-                xleft = winrect.left; //chyba zawsze 0, mozna pominac
-                xright = winrect.right;
-                ytop = winrect.top; //to tez zawsze 0, mozna pominac
-                ybottom = winrect.bottom;
-            }
-            else {
-                DWORD err = GetLastError();
-            }
-            int space = 500 - 50 - 75; // wys_pros - 0.1wys_pros - 0.15wys_pros CHCE TYLKO OMINAC FLOATING POINT BO NIE CHCE JUZ ZMIENIAC DrawLevitatingPerson() PLS
-            globalspacing = space;
-            globalright = (int)xright;
-            globalbottom = (int)ybottom;
-
-            wholeshaft(graphics,winrect, 200, 500);
-            innershaft(graphics, winrect, 200, 100);
-            for (int floor = 0; floor < 5; floor++) {
-                if (peopleWaiting[floor]) {   
-
-                    int y = ybottom/2 - 250 + 50 + 10 + (4-floor) * 0.2 * space; //50=0.1wyspros = topPadding, 250 = 0.5wyspros, ybottom/2 = srodek w pionie, 10 = offest, zeby lewitowali troche nizej nad podloga hehe 
-                    int x;
-                    
-                    if (floor % 2 == 0) {
-                       x = xright / 2 - 250 - 100;
-                    }
-                    else {
-                        x = xright / 2 + 250 + 100;
-                    }
-
-                    DrawLevitatingPerson(graphics, x, y);
-
-                    /*for (int i = 0; i < peoplecount; ++i) {
-                        DrawLevitatingPerson(graphics, people[i].x, people[i].y);
-                    }*/
-
-                    wchar_t buf[100];
-                    swprintf_s(buf, 100, L"Person added to floor: %d\n", floor+1);
-                    OutputDebugString(buf);
-
-                    //peopleWaiting[floor] = false;
-                }
-                    
-            }
-            
-
-
-
-
-
-
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
+            xleft = winrect.left; //chyba zawsze 0, mozna pominac
+            xright = winrect.right;
+            ytop = winrect.top; //to tez zawsze 0, mozna pominac
+            ybottom = winrect.bottom;
         }
-        break;
-    
-    case WM_CREATE:        
+        else {
+            DWORD err = GetLastError();
+        }
+        int space = 500 - 50 - 75; // wys_pros - 0.1wys_pros - 0.15wys_pros CHCE TYLKO OMINAC FLOATING POINT BO NIE CHCE JUZ ZMIENIAC DrawLevitatingPerson() PLS
+        globalspacing = space;
+        globalright = (int)xright;
+        globalbottom = (int)ybottom;
+
+        wholeshaft(graphics, winrect, 200, 500);
+        innershaft(graphics, winrect, 200, 100);
+        for (int floor = 0; floor < 5; floor++) {
+            if (peopleWaiting[floor]) {
+
+                int y = ybottom / 2 - 250 + 50 + 10 + (4 - floor) * 0.2 * space; //50=0.1wyspros = topPadding, 250 = 0.5wyspros, ybottom/2 = srodek w pionie, 10 = offest, zeby lewitowali troche nizej nad podloga hehe 
+                int x;
+
+                if (floor % 2 == 0) {
+                    x = xright / 2 - 250 - 100;
+                }
+                else {
+                    x = xright / 2 + 250 + 100;
+                }
+
+                DrawLevitatingPerson(graphics, x, y);
+
+                /*for (int i = 0; i < peoplecount; ++i) {
+                    DrawLevitatingPerson(graphics, people[i].x, people[i].y);
+                }*/
+
+                wchar_t buf[100];
+                swprintf_s(buf, 100, L"Person added to floor: %d\n", floor + 1);
+                OutputDebugString(buf);
+
+                //peopleWaiting[floor] = false;
+            }
+
+        }
+
+
+
+
+
+
+
+        // TODO: Add any drawing code that uses hdc here...
+        EndPaint(hWnd, &ps);
+    }
+    break;
+
+    case WM_CREATE:
         globalHwnd = hWnd;
         SetTimer(hWnd, 1, 1000, NULL);
 
@@ -442,10 +451,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 else {
                     x = startX + btnindex * (buttonWidth + 10) + 1200;
                 }
-                
-                int y = startY + (4-floor) * floorSpacing;
 
-                
+                int y = startY + (4 - floor) * floorSpacing;
+
+
                 int btnID = 100 + floor * 10 + btnindex; // Unique ID for each button
 
                 floorButtons[floor][b] = CreateWindow(
@@ -460,7 +469,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     NULL
                 );
 
-                buttons[structindex++] = {btnID, b+1, floor+1};                
+                buttons[structindex++] = { btnID, b + 1, floor + 1 };
 
                 btnindex++;
             }
@@ -490,8 +499,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         pickupFloor = -1;
                         dropoffFloor = -1;
                     }
+                    else {
+                        // Done
+                        if (requestQueue.empty()) {
+                            KillTimer(hWnd, 1);
+                        }
+                        else {
+                            if (requestQueue.size() > 1) { requestQueue.pop(); }
+                            int code = requestQueue.front();
+                            requestQueue.pop();
+                            int from = code / 10;
+                            int to = code % 10;
+                            movement(from, to);
+                        }
+                    }
                 }
-            }                       
+            }
         }
         else if (wParam == pauseTimerId) {  // Pause timer expired
             isPaused = false;
@@ -505,8 +528,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else if (current > destination)
                 direction = false;
 
-            SetTimer(hWnd, 1, 1000, NULL);
         }
+
+        SetTimer(hWnd, 1, 1000, NULL);
+    
+
         break;
     case WM_DESTROY:
         KillTimer(hWnd, 1);
@@ -537,3 +563,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+//AAAAAAAAAAAAAAAAAAAA
