@@ -138,6 +138,8 @@ bool direction = true; //true - going up, false - going down
 HWND globalHwnd;
 int pickupFloor = -1;
 int dropoffFloor = -1;
+bool isPaused = false;
+UINT_PTR pauseTimerId = 2;
 
 HWND floorButtons[5][4];
 //buttons
@@ -270,19 +272,10 @@ static void innershaft(Graphics& g, RECT client, int szer_wind, int wys_wind){
 static void movement(int fromFloor, int toFloor) {
     if (fromFloor < 1 || fromFloor > 5 || toFloor < 1 || toFloor > 5) return;
 
-    if (current != fromFloor) {
-        pickupFloor = fromFloor;
-        dropoffFloor = toFloor;
-        destination = pickupFloor;
-    }
-    else {
-        // Already at pickup, go to drop-off
-        destination = toFloor;
-        pickupFloor = -1; // Clear pickup
-        dropoffFloor = toFloor;
-    }
+    pickupFloor = fromFloor;
+    dropoffFloor = toFloor;
+    destination = pickupFloor;  // First go to pickup
 
-    // Set direction
     if (current < destination)
         direction = true;
     else if (current > destination)
@@ -478,56 +471,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_TIMER:
         if (wParam == 1) { // Timer ID
-            if (direction && current < destination) {
-                current++;
-            }
-            else if (!direction && current > destination) {
-                current--;
-            }
+            if (!isPaused) {
+                if (direction && current < destination) current++;
+                else if (!direction && current > destination) current--;
 
-            /*for (int i = 0; i < peoplecount; ++i) {
-                if (people[i].moving) {
-                    int targetX = globalright / 2;  // Shaft center
+                InvalidateRect(hWnd, NULL, TRUE);
 
-                    // Move step-by-step
-                    if (people[i].x > targetX) people[i].x -= 5;
-                    else if (people[i].x < targetX) people[i].x += 5;
-                    else people[i].moving = false;  // Reached shaft
-
-                    wchar_t buf[200];
-                    swprintf_s(buf, 200, L"Window size: right = %d, bottom = %d, spacing = %d\n", globalright, globalbottom, globalspacing);
-                    OutputDebugString(buf);
-
-
-                    wchar_t dbg[100];
-                    swprintf_s(dbg, 100, L"Person %d pos: (%d, %d)\n", i, people[i].x, people[i].y);
-                    OutputDebugString(dbg);
+                if (current == destination) {
+                    if (current == pickupFloor) {
+                        // Arrived at pickup floor, pause here
+                        isPaused = true;
+                        KillTimer(hWnd, 1);  // Stop movement timer
+                        SetTimer(hWnd, pauseTimerId, 1500, NULL);  // Pause 1.5 seconds
+                    }
+                    else if (current == dropoffFloor) {
+                        // Arrived at dropoff floor, stop movement
+                        KillTimer(hWnd, 1);
+                        pickupFloor = -1;
+                        dropoffFloor = -1;
+                    }
                 }
-                else {
-                    // reached shaft
-                    for (int j = i; j < peoplecount - 1; ++j)
-                        people[j] = people[j + 1];
-                    peoplecount--;
-                    i--;  // So the next person isn't skipped
-                }
-            }*/
+            }                       
+        }
+        else if (wParam == pauseTimerId) {  // Pause timer expired
+            isPaused = false;
+            KillTimer(hWnd, pauseTimerId);
 
+            // Set destination to dropoff and restart movement
+            destination = dropoffFloor;
 
-            if (current == destination) {
-                if (pickupFloor != -1) {
-                    // Arrived at pickup, go to drop-off
-                    destination = dropoffFloor;
-                    pickupFloor = -1;
+            if (current < destination)
+                direction = true;
+            else if (current > destination)
+                direction = false;
 
-                    direction = (destination > current);
-                }
-                else {
-                    // Done
-                    KillTimer(hWnd, 1);
-                }
-            }
-
-            InvalidateRect(hWnd, NULL, TRUE); // Trigger repaint
+            SetTimer(hWnd, 1, 1000, NULL);
         }
         break;
     case WM_DESTROY:
