@@ -342,9 +342,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     wchar_t tyf[100];
                     wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
                     OutputDebugString(tyf);
-                    if (requestQueue.size() == 1) {
-                        movement(fromFloor, destFloor);
-                    }// your movement function
+                    
+                    if (pickupFloor == -1 && dropoffFloor == -1) {
+                        int code = requestQueue.front();
+                        requestQueue.pop();
+                        int from = code / 10;
+                        int to = code % 10;
+                        movement(from, to);  
+                    }
+
                     break;
                 }
             }
@@ -498,14 +504,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         KillTimer(hWnd, 1);
                         pickupFloor = -1;
                         dropoffFloor = -1;
-                    }
-                    else {
+                    
                         // Done
-                        if (requestQueue.empty()) {
-                            KillTimer(hWnd, 1);
-                        }
-                        else {
-                            if (requestQueue.size() > 1) { requestQueue.pop(); }
+                        if (!requestQueue.empty()) {
+                            
+                           // if (requestQueue.size() > 1) { requestQueue.pop(); }
                             int code = requestQueue.front();
                             requestQueue.pop();
                             int from = code / 10;
@@ -527,10 +530,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 direction = true;
             else if (current > destination)
                 direction = false;
-
+            
+            SetTimer(hWnd, 1, 1000, NULL);
+       
         }
 
-        SetTimer(hWnd, 1, 1000, NULL);
+        
     
 
         break;
