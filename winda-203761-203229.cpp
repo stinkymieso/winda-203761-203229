@@ -556,6 +556,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SetTextColor(hdc, RGB(0, 0, 0)); // Black text
         TextOut(hdc, globalright / 2 - 100, 10, buffer, wcslen(buffer)); 
 
+        wchar_t buffer2[100];
+        swprintf(buffer2, 100, L"Masa osob w windzie: %d", insideCount*70);
+
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(0, 0, 0)); // Black text
+        TextOut(hdc, globalright / 2 - 100, 20, buffer2, wcslen(buffer2));
+
 
         // TODO: Add any drawing code that uses hdc here...
         EndPaint(hWnd, &ps);
@@ -739,8 +746,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     //    int to = code % 10;
                     //    movement(from, to);
                     //}
-                //}
-           //}
+                
 
             if (requestQueue.empty() && !isPaused && destination == -1) {
                 DWORD now = GetTickCount();
