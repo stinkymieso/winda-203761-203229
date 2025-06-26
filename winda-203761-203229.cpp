@@ -468,28 +468,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
 
 
-                        
-                        
 
-                    
-                    //peopleWaiting[fromFloor] = false;
-                    requestQueue = betterQueue(requestQueue, fromFloor * 10 + destFloor);
-                    wchar_t tyf[100];
-                    wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
-                    OutputDebugString(tyf);
-                    
-                    if (pickupFloor == -1 && dropoffFloor == -1) {
-                        int code = requestQueue.front();
-                        requestQueue.pop();
-                        int from = code / 10;
-                        int to = code % 10;
-                        movement(from, to);  
+
+
+
+                        //peopleWaiting[fromFloor] = false;
+                        requestQueue = betterQueue(requestQueue, fromFloor * 10 + destFloor);
+                        wchar_t tyf[100];
+                        wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
+                        OutputDebugString(tyf);
+
+                        if (pickupFloor == -1 && dropoffFloor == -1) {
+                            int code = requestQueue.front();
+                            requestQueue.pop();
+                            int from = code / 10;
+                            int to = code % 10;
+                            movement(from, to);
+                        }
+
+                        break;
                     }
-
-                    break;
                 }
-            }
-        }
+            
+       
         else {
 
 
