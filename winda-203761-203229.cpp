@@ -208,7 +208,7 @@ static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     // Body
     g.DrawLine(&pen, Point(cx, top), Point(cx, top + 25)); // torso
 
-    // Arms (folded, optional)
+    // Arms 
     g.DrawLine(&pen, Point(cx - 10, top + 10), Point(cx + 10, top + 10));
 
     // Legs cross-legged: draw an "X" under the body
@@ -234,7 +234,7 @@ void DrawPersonWithTarget(Graphics& g, int x, int y, int targetFloor) {
 
 static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pros){
 
-    Pen pen(Color(135, 0, 0, 0), 2);//proba zmiany alpha
+    Pen pen(Color(135, 0, 0, 0), 2);
 
     const float bottomPadding = 0.15f * wys_pros;  // space below 1st floor
     const float topPadding = 0.1f * wys_pros;
@@ -258,7 +258,7 @@ static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pr
     g.DrawRectangle(&pen, shaftRect);
 
     // Set pen color for floor lines
-    pen.SetColor(Color(175, 110, 175, 250)); // baby blue
+    pen.SetColor(Color(175, 110, 175, 250)); 
 
     // Draw left horizontal lines (floors)
     g.DrawLine(&pen,
@@ -292,7 +292,7 @@ static void innershaft(Graphics& g, RECT client, int szer_wind, int wys_wind){
     const float bottomPadding = 0.15f * wys_wind * 5;  // space below 1st floor
     const float topPadding = 0.1f * wys_wind * 5;
 
-    int liftx = client.right / 2 - 100; //zmienuic na szer_wind/2 (?)
+    int liftx = client.right / 2 - 100; 
     int liftbasey = (5 * wys_wind - bottomPadding); // 5*wyswind - bottom padding to linia dolna lewa                        
     int lifty = liftbasey - (current-1) * 0.2f * (5 * wys_wind - topPadding - bottomPadding); // 100 - wysokosc innershaft
 
@@ -321,19 +321,6 @@ static void movement(int fromFloor, int toFloor) {
     swprintf_s(buf, 100, L"Movement queued/called: floor %d\n", toFloor);
     OutputDebugString(buf);
 }
-
-static void RemovePeopleAtFloor(int floor) {
-    for (int i = 0; i < peoplecount; ++i) {
-        if (people[i].floor == floor && people[i].state == InsideElevator) {
-            for (int j = i; j < peoplecount - 1; ++j) {
-                people[j] = people[j + 1];
-            }
-            peoplecount--;
-            i--;
-        }
-    }
-}
-
 
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -446,8 +433,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                     // Limit max 8 people inside elevator shaft
                     if (insideCount >= 8) {
-                        OutputDebugString(L"Elevator full, request cancelled.\n");
-                        // Optionally show a message or just ignore the request
                         break;  // Cancel adding this person
                     }
                     else {
@@ -468,11 +453,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
 
 
-
-
-
-
-                        //peopleWaiting[fromFloor] = false;
                         requestQueue = betterQueue(requestQueue, fromFloor * 10 + destFloor);
                         wchar_t tyf[100];
                         wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
@@ -491,30 +471,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
 
 
-                else {
-
-
-                    // Parse the menu selections:
-                    switch (wmId)
-                    {
-                    case IDM_ABOUT: {
-                        DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                        break;
-                        }
-                    case IDM_EXIT: {
-                        DestroyWindow(hWnd);
-                        break;
-                        }
-                    default: {
-                        //return DefWindowProc(hWnd, message, wParam, lParam);
-                        break;
-                        }
-                    }
-                }
+            }
+        }
+        else {
+            // Parse the menu selections:
+            switch (wmId)
+            {
+            case IDM_ABOUT: {
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                break;
+            }
+            case IDM_EXIT: {
+                DestroyWindow(hWnd);
+                break;
+            }
+            default: {
+                //return DefWindowProc(hWnd, message, wParam, lParam);
+                break;
+            }
             }
         }
     }
-            break;
+        break;
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
@@ -615,6 +593,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         break;
     case WM_TIMER:
+    {
         if (wParam == 1) { // Timer ID
             now = GetTickCount64();
 
@@ -732,7 +711,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
             }
         }
-        
+
         else if (wParam == pauseTimerId) {  // Pause timer expired
             isPaused = false;
             KillTimer(hWnd, pauseTimerId);
@@ -776,18 +755,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
         }
-
+    }
 
         break;
-    case WM_DESTROY:
+    case WM_DESTROY: {
         KillTimer(hWnd, 1);
         PostQuitMessage(0);
+        }
         break;
+    
     default:
+        {
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
     }
+}
 
 
 // Message handler for about box.
