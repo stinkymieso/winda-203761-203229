@@ -383,7 +383,7 @@ std::queue<int> betterQueue(std::queue<int> queue, int id) {
             }
             return newQueue;
         }
-        else if (id / 10 > id % 10) { // jazda w dó³
+        else { // jazda w dó³
             while (!queue.empty()) {
                 if ((queue.front() / 10 > queue.front() % 10) && queue.front() / 10 != id / 10 && queue.front() % 10 != id % 10) {
                     int floors[4];
@@ -497,14 +497,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     // Parse the menu selections:
                     switch (wmId)
                     {
-                    case IDM_ABOUT:
+                    case IDM_ABOUT: {
                         DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                         break;
-                    case IDM_EXIT:
+                        }
+                    case IDM_EXIT: {
                         DestroyWindow(hWnd);
                         break;
-                    default:
-                        return DefWindowProc(hWnd, message, wParam, lParam);
+                        }
+                    default: {
+                        //return DefWindowProc(hWnd, message, wParam, lParam);
+                        break;
+                        }
                     }
                 }
             }
