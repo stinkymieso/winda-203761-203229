@@ -689,8 +689,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             pickupFloor = -1;
                             dropoffFloor = -1;
 
-                            /*if (!requestQueue.empty()) {
-                                if (requestQueue.size() > 1) { requestQueue.pop(); }
+                            if (!requestQueue.empty()) {
                                 int code = requestQueue.front();
                                 requestQueue.pop();
                                 int from = code / 10;
@@ -699,7 +698,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             }
                             else {
                                 OutputDebugString(L"No more requests.\n");
-                            }*/
+                            }
                             SetTimer(hWnd, pauseTimerId, 1500, NULL);
                             InvalidateRect(hWnd, NULL, TRUE);
                         
@@ -736,15 +735,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
                     // Done
-                    if (!requestQueue.empty()) {
+                    //if (!requestQueue.empty()) {
 
-                        // if (requestQueue.size() > 1) { requestQueue.pop(); }
-                        int code = requestQueue.front();
-                        requestQueue.pop();
-                        int from = code / 10;
-                        int to = code % 10;
-                        movement(from, to);
-                    }
+                    //    // if (requestQueue.size() > 1) { requestQueue.pop(); }
+                    //    int code = requestQueue.front();
+                    //    requestQueue.pop();
+                    //    int from = code / 10;
+                    //    int to = code % 10;
+                    //    movement(from, to);
+                    //}
                 }
             }
 
@@ -787,17 +786,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 direction = false;
 
 
-            // If there are more requests, process next
-            if (!requestQueue.empty()) {
-                int code = requestQueue.front();
+            //// If there are more requests, process next
+            //if (!requestQueue.empty()) {
+            //    int code = requestQueue.front();
 
-                lastRequestTime = GetTickCount64();
+            //    lastRequestTime = GetTickCount64();
 
-                requestQueue.pop();
-                int from = code / 10;
-                int to = code % 10;
-                movement(from, to);
-            }
+            //    requestQueue.pop();
+            //    int from = code / 10;
+            //    int to = code % 10;
+            //    movement(from, to);
+            //}
             else KillTimer(hWnd, 1);
             // Else remain idle (no timer restart)
             SetTimer(hWnd, 1, 1000, NULL);
