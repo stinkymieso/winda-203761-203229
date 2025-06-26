@@ -4,6 +4,8 @@
 
 Projekt to prosta symulacja działania windy. Pozwala na kolejkowanie paru żądań oraz na ich optymalizację. Do napisania symulacji użyto języka C++ oraz GDI+ do stworzenia interfejsu graficznego programu.
 
+Niestety nasz program ma mały problem z obsługą kilku ludzików na raz i psuje się jeśli nie poczeka się na koniec timera.
+
 # Krótki opis działania poszczególnych funkcji w programie
 
 **1. DrawLevitatingPerson() + DrawPersonWithTarget():**
