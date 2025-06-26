@@ -522,7 +522,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (people[i].state == InsideElevator) {
                         int drawX = people[i].x;
                         int drawY = people[i].y;
-                        DrawPersonWithTarget(graphics, drawX, drawY, people[i].targetfloor);
+                        DrawPersonWithTarget(graphics, drawX, drawY - (i - 1) * 20, people[i].targetfloor);
                     }
                 }
 
