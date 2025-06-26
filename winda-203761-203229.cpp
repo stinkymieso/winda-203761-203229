@@ -489,26 +489,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         break;
                     }
                 }
-            
-       
-        else {
 
 
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
+                else {
+
+
+                    // Parse the menu selections:
+                    switch (wmId)
+                    {
+                    case IDM_ABOUT:
+                        DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                        break;
+                    case IDM_EXIT:
+                        DestroyWindow(hWnd);
+                        break;
+                    default:
+                        return DefWindowProc(hWnd, message, wParam, lParam);
+                    }
+                }
             }
-        }
-    }
-    break;
+            break;
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
@@ -543,7 +543,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 for (int i = 0; i < peoplecount; ++i) {
                     if (people[i].state == InsideElevator) {
                         // Draw person inside elevator at shaft center (X)
-                        int drawX = people[i].x;                      
+                        int drawX = people[i].x;
                         int drawY = people[i].y;
                         DrawPersonWithTarget(graphics, drawX, drawY, people[i].targetfloor);
                     }
@@ -617,12 +617,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 now, current, direction ? 1 : 0, destination, pickupFloor, dropoffFloor, requestQueue.size());
             OutputDebugString(dbg);
 
-            
+
 
             if (!isPaused && destination != -1) {
                 if (direction && current < destination) current++;
                 else if (!direction && current > destination) current--;
-                             
+
 
                 InvalidateRect(hWnd, NULL, TRUE);
 
@@ -685,7 +685,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             InvalidateRect(hWnd, NULL, TRUE);
                         }
                     }
-                    
+
                 }
                 if (current == destination && !isPaused && destination != -1) {
                     // Done
@@ -708,24 +708,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     people[i].floor = current - 1;
                     people[i].y = globalbottom / 2 - 250 + 50 + 10 + (4 - people[i].floor) * (int)(0.2 * globalspacing);
 
-      
-                        KillTimer(hWnd, 1);
-                        pickupFloor = -1;
-                        dropoffFloor = -1;
-                    
-                        // Done
-                        if (!requestQueue.empty()) {
-                            
-                           // if (requestQueue.size() > 1) { requestQueue.pop(); }
-                            int code = requestQueue.front();
-                            requestQueue.pop();
-                            int from = code / 10;
-                            int to = code % 10;
-                            movement(from, to);
-                        }
+
+                    KillTimer(hWnd, 1);
+                    pickupFloor = -1;
+                    dropoffFloor = -1;
+
+                    // Done
+                    if (!requestQueue.empty()) {
+
+                        // if (requestQueue.size() > 1) { requestQueue.pop(); }
+                        int code = requestQueue.front();
+                        requestQueue.pop();
+                        int from = code / 10;
+                        int to = code % 10;
+                        movement(from, to);
                     }
                 }
             }
+        }
         }
         else if (wParam == pauseTimerId) {  // Pause timer expired
             isPaused = false;
@@ -747,14 +747,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 dropoffFloor = -1;
             }*/
             // Set destination to dropoff and restart movement
-           destination = dropoffFloor;
+            destination = dropoffFloor;
 
             if (current < destination)
                 direction = true;
             else if (current > destination)
                 direction = false;
 
-                       
+
             // If there are more requests, process next
             /*if (!requestQueue.empty()) {
                 int code = requestQueue.front();
@@ -768,10 +768,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             SetTimer(hWnd, 1, 1000, NULL);
             InvalidateRect(hWnd, NULL, TRUE);
 
-           
+
         }
 
-    
+
         break;
     case WM_DESTROY:
         KillTimer(hWnd, 1);
@@ -779,10 +779,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
-        }
-        return 0;
     }
-
+    return 0;
+    }
+}
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
