@@ -508,6 +508,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
+        }
+    }
             break;
     case WM_PAINT:
     {
@@ -726,7 +728,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
             }
         }
-        }
+        
         else if (wParam == pauseTimerId) {  // Pause timer expired
             isPaused = false;
             KillTimer(hWnd, pauseTimerId);
@@ -782,7 +784,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
     }
-}
+
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
