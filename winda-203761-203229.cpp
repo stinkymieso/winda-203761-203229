@@ -7,6 +7,7 @@
 #include <objidl.h>
 #include <gdiplus.h>
 #include <queue>
+#include <algorithm>
 
 #pragma comment(lib, "gdiplus.lib")
 using namespace Gdiplus;
@@ -346,6 +347,72 @@ static void RemovePeopleAtFloor(int floor) {
 //  WM_TIMER    - for animation purposes - my addition
 //
 
+std::queue<int> betterQueue(std::queue<int> queue, int id) {
+    std::queue<int> newQueue;
+    if (queue.empty()) {
+        queue.push(id);
+        return queue;
+    }
+    else
+    {
+        int id1, id2, id3;
+        if (id / 10 < id % 10) { //jazda w góre
+            while (!queue.empty()) {
+                if ((queue.front() / 10 < queue.front() % 10) && queue.front() / 10 != id / 10 && queue.front() % 10 != id % 10) {
+                    int floors[4];
+                    floors[0] = queue.front() / 10;
+                    floors[1] = queue.front() % 10;
+                    floors[2] = (int)(id / 10);
+                    floors[3] = id % 10;
+                    std::sort(&floors[0], &floors[3]);
+                    id1 = floors[0] * 10 + floors[1];
+                    id2 = floors[1] * 10 + floors[2];
+                    id3 = floors[2] * 10 + floors[3];
+                    newQueue.push(id1);
+                    newQueue.push(id2);
+                    newQueue.push(id3);
+                    queue.pop();
+                    while (!queue.empty()) {
+                        newQueue.push(queue.front());
+                        queue.pop();
+                    }
+                    return newQueue;
+                }
+                newQueue.push(queue.front());
+                queue.pop();
+            }
+            return newQueue;
+        }
+        else if (id / 10 > id % 10) { // jazda w dó³
+            while (!queue.empty()) {
+                if ((queue.front() / 10 > queue.front() % 10) && queue.front() / 10 != id / 10 && queue.front() % 10 != id % 10) {
+                    int floors[4];
+                    floors[0] = queue.front() / 10;
+                    floors[1] = queue.front() % 10;
+                    floors[2] = id / 10;
+                    floors[3] = id % 10;
+                    std::sort(&floors[0], &floors[3]);
+                    id1 = floors[3] * 10 + floors[2];
+                    id2 = floors[2] * 10 + floors[1];
+                    id3 = floors[1] * 10 + floors[0];
+                    newQueue.push(id1);
+                    newQueue.push(id2);
+                    newQueue.push(id3);
+                    queue.pop();
+                    while (!queue.empty()) {
+                        newQueue.push(queue.front());
+                        queue.pop();
+                    }
+                    return newQueue;
+                }
+                newQueue.push(queue.front());
+                queue.pop();
+            }
+            return newQueue;
+        }
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -401,30 +468,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
 
 
-                        /*Person& p = people[peoplecount++];
-
-                        p.floor = fromFloor - 1;
-                        p.x = (p.floor % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
-                        p.y = globalbottom / 2 - 250 + 50 + 10 + (4 - (p.floor)) * (int)(0.2f * globalspacing);
-                        p.moving = true;
-                        p.inelevator = false;
-                        p.targetfloor = destFloor;*/
-
-                        //peopleWaiting[fromFloor] = false;
-                        requestQueue.push(fromFloor * 10 + destFloor);
-                        wchar_t tyf[100];
-                        wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
-                        OutputDebugString(tyf);
-                        if (pickupFloor == -1 && dropoffFloor == -1) {
-                            int code = requestQueue.front();
-                            requestQueue.pop();
-                            int from = code / 10;
-                            int to = code % 10;
-                            movement(from, to);
-                        }
-                    }
+                        
+                        
 
                     
+                    //peopleWaiting[fromFloor] = false;
+                    requestQueue = betterQueue(requestQueue, fromFloor * 10 + destFloor);
+                    wchar_t tyf[100];
+                    wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
+                    OutputDebugString(tyf);
+                    
+                    if (pickupFloor == -1 && dropoffFloor == -1) {
+                        int code = requestQueue.front();
+                        requestQueue.pop();
+                        int from = code / 10;
+                        int to = code % 10;
+                        movement(from, to);  
+                    }
+
                     break;
                 }
             }
@@ -647,6 +708,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     people[i].y = globalbottom / 2 - 250 + 50 + 10 + (4 - people[i].floor) * (int)(0.2 * globalspacing);
 
       
+                        KillTimer(hWnd, 1);
+                        pickupFloor = -1;
+                        dropoffFloor = -1;
+                    
+                        // Done
+                        if (!requestQueue.empty()) {
+                            
+                           // if (requestQueue.size() > 1) { requestQueue.pop(); }
+                            int code = requestQueue.front();
+                            requestQueue.pop();
+                            int from = code / 10;
+                            int to = code % 10;
+                            movement(from, to);
+                        }
+                    }
                 }
             }
         }
