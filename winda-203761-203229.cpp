@@ -320,6 +320,8 @@ static void movement(int fromFloor, int toFloor) {
     OutputDebugString(buf);
 }
 
+
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
