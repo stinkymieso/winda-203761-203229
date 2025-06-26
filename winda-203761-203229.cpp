@@ -631,10 +631,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         KillTimer(hWnd, 1);  // Stop movement timer
                         SetTimer(hWnd, pauseTimerId, 1500, NULL);  // Pause 1.5 seconds
                     }
-                    else if (current == dropoffFloor) {
+                    if (current == dropoffFloor) {
                         // Arrived at dropoff floor, stop movement
                         //isPaused = true;
                         KillTimer(hWnd, 1);  // Stop movement timer
+                        
                         for (int i = 0; i < peoplecount; ++i) {
                             if (people[i].state == InsideElevator && people[i].floor == current - 1 && people[i].targetfloor == current - 1) {
                                 // Remove person by shifting array left
@@ -645,12 +646,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                                 i--; // check new person at this index
                                 OutputDebugString(L"Person exited elevator at dropoff floor.\n");
                             }
+                        }
 
-
-
-                            SetTimer(hWnd, pauseTimerId, 1500, NULL);
-
-
+                            isPaused = true;                     
 
 
                             pickupFloor = -1;
@@ -667,8 +665,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                             else {
                                 OutputDebugString(L"No more requests.\n");
                             }*/
+                            SetTimer(hWnd, pauseTimerId, 1500, NULL);
                             InvalidateRect(hWnd, NULL, TRUE);
-                        }
+                        
                     }
 
                 }
@@ -693,10 +692,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     people[i].floor = current - 1;
                     people[i].y = globalbottom / 2 - 250 + 50 + 10 + (4 - people[i].floor) * (int)(0.2 * globalspacing);
 
-
-                    KillTimer(hWnd, 1);
-                    pickupFloor = -1;
-                    dropoffFloor = -1;
 
                     // Done
                     if (!requestQueue.empty()) {
@@ -741,14 +736,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
             // If there are more requests, process next
-            /*if (!requestQueue.empty()) {
+            if (!requestQueue.empty()) {
                 int code = requestQueue.front();
                 requestQueue.pop();
                 int from = code / 10;
                 int to = code % 10;
                 movement(from, to);
             }
-            else KillTimer(hWnd, 1);*/
+            else KillTimer(hWnd, 1);
             // Else remain idle (no timer restart)
             SetTimer(hWnd, 1, 1000, NULL);
             InvalidateRect(hWnd, NULL, TRUE);
