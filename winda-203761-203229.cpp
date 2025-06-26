@@ -739,8 +739,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     //    int to = code % 10;
                     //    movement(from, to);
                     //}
-                }
-            }
+                //}
+           //}
 
             if (requestQueue.empty() && !isPaused && destination == -1) {
                 DWORD now = GetTickCount();
