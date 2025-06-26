@@ -165,17 +165,35 @@ std::queue<int> floorQueue;
 bool peopleWaiting[5] = { false };
 
 //drawing people
+
+enum PersonState {
+    Waiting,      // waiting on the floor
+    MovingToShaft,// walking towards elevator shaft
+    InsideElevator,// inside the elevator, moving with it
+    Exiting       // optional, if you want them to leave the elevator
+};
+
 struct Person {
     int floor;
+    int targetfloor;
     int x;
     int y;
     bool moving;
+    bool leaving;
+    bool inElevator;
+    PersonState state;
+    ULONGLONG exitTime = 0;
 };
 
 Person people[50];
 int peoplecount = 0;
+ULONGLONG now;
 
 std::queue<int> requestQueue;
+
+bool anyoneStillMoving = false;
+
+int countInside = 0;
 
 static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     Pen pen(Color(255, 0, 0, 0), 2); // black pen, 2px wide
@@ -201,6 +219,17 @@ static void DrawLevitatingPerson(Graphics& g, int x, int y) {
     g.FillEllipse(&brush, x, y + 50, 20, 5); // shadow
 }
 
+void DrawPersonWithTarget(Graphics& g, int x, int y, int targetFloor) {
+    DrawLevitatingPerson(g, x, y);
+
+    // Draw target floor number above the head
+    WCHAR buf[10];
+    wsprintf(buf, L"%d", targetFloor);
+
+    Font font(L"Arial", 14);
+    SolidBrush brush(Color(255, 0, 0, 0)); // Black text
+    g.DrawString(buf, -1, &font, PointF(x + 2, y - 20), &brush);
+}
 
 static void wholeshaft(Graphics& g, RECT client, double szer_pros, double wys_pros){
 
@@ -292,6 +321,18 @@ static void movement(int fromFloor, int toFloor) {
     OutputDebugString(buf);
 }
 
+static void RemovePeopleAtFloor(int floor) {
+    for (int i = 0; i < peoplecount; ++i) {
+        if (people[i].floor == floor && people[i].state == InsideElevator) {
+            for (int j = i; j < peoplecount - 1; ++j) {
+                people[j] = people[j + 1];
+            }
+            peoplecount--;
+            i--;
+        }
+    }
+}
+
 
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -329,22 +370,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     int fromFloor = buttons[i].fromFloor;
                     peopleWaiting[fromFloor - 1] = true;
 
+                    int insideCount = 0;
+                    for (int j = 0; j < peoplecount; ++j) {
+                        if (people[j].state == InsideElevator) {
+                            insideCount++;
+                        }
+                    }
 
-                    //people[peoplecount].floor = fromFloor - 1;
-                    //people[peoplecount].x = ((fromFloor - 1) % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
-                    //people[peoplecount].y = globalbottom / 2 - 250 + 50 + 10 + (4 - (fromFloor - 1)) * (int)(0.2f * globalspacing);
-                    //people[peoplecount].moving = true;
-                    //peoplecount++;
+                    // Limit max 8 people inside elevator shaft
+                    if (insideCount >= 8) {
+                        OutputDebugString(L"Elevator full, request cancelled.\n");
+                        // Optionally show a message or just ignore the request
+                        break;  // Cancel adding this person
+                    }
+                    else {
+                        if (peoplecount < 100) {
+                            people[peoplecount].floor = fromFloor - 1;
+
+                            // Starting x pos for new person: far right + 90, offset left by 10 per person inside elevator
+                            people[peoplecount].x = (globalright / 2 + 90) - (insideCount * 10);
+
+                            // Y position stays the same, no offset for people waiting on same floor anymore
+                            people[peoplecount].y = globalbottom / 2 - 250 + 50 + 10 + (4 - (fromFloor - 1)) * 0.2 * globalspacing;
+
+                            people[peoplecount].targetfloor = destFloor;
+                            people[peoplecount].moving = true;
+                            people[peoplecount].state = Waiting;
+
+                            peoplecount++;
+                        }
 
 
-                    //peopleWaiting[fromFloor] = false;
-                    requestQueue.push(fromFloor * 10 + destFloor);
-                    wchar_t tyf[100];
-                    wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
-                    OutputDebugString(tyf);
-                    if (requestQueue.size() == 1) {
-                        movement(fromFloor, destFloor);
-                    }// your movement function
+                        /*Person& p = people[peoplecount++];
+
+                        p.floor = fromFloor - 1;
+                        p.x = (p.floor % 2 == 0) ? (globalright / 2 - 250 - 100) : (globalright / 2 + 250 + 100);
+                        p.y = globalbottom / 2 - 250 + 50 + 10 + (4 - (p.floor)) * (int)(0.2f * globalspacing);
+                        p.moving = true;
+                        p.inelevator = false;
+                        p.targetfloor = destFloor;*/
+
+                        //peopleWaiting[fromFloor] = false;
+                        requestQueue.push(fromFloor * 10 + destFloor);
+                        wchar_t tyf[100];
+                        wsprintf(tyf, L"kolejka %d \n", requestQueue.front());
+                        OutputDebugString(tyf);
+                        if (pickupFloor == -1 && dropoffFloor == -1) {
+                            int code = requestQueue.front();
+                            requestQueue.pop();
+                            int from = code / 10;
+                            int to = code % 10;
+                            movement(from, to);
+                        }
+                    }
+
+                    
                     break;
                 }
             }
@@ -397,21 +477,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         for (int floor = 0; floor < 5; floor++) {
             if (peopleWaiting[floor]) {
 
-                int y = ybottom / 2 - 250 + 50 + 10 + (4 - floor) * 0.2 * space; //50=0.1wyspros = topPadding, 250 = 0.5wyspros, ybottom/2 = srodek w pionie, 10 = offest, zeby lewitowali troche nizej nad podloga hehe 
-                int x;
 
-                if (floor % 2 == 0) {
-                    x = xright / 2 - 250 - 100;
+                for (int i = 0; i < peoplecount; ++i) {
+                    if (people[i].state == InsideElevator) {
+                        // Draw person inside elevator at shaft center (X)
+                        int drawX = people[i].x;                      
+                        int drawY = people[i].y;
+                        DrawPersonWithTarget(graphics, drawX, drawY, people[i].targetfloor);
+                    }
                 }
-                else {
-                    x = xright / 2 + 250 + 100;
-                }
-
-                DrawLevitatingPerson(graphics, x, y);
-
-                /*for (int i = 0; i < peoplecount; ++i) {
-                    DrawLevitatingPerson(graphics, people[i].x, people[i].y);
-                }*/
 
                 wchar_t buf[100];
                 swprintf_s(buf, 100, L"Person added to floor: %d\n", floor + 1);
@@ -421,12 +495,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
 
         }
-
-
-
-
-
-
 
         // TODO: Add any drawing code that uses hdc here...
         EndPaint(hWnd, &ps);
@@ -480,9 +548,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_TIMER:
         if (wParam == 1) { // Timer ID
-            if (!isPaused) {
+            now = GetTickCount64();
+
+            wchar_t dbg[256];
+            swprintf(dbg, 256, L"[TIMER] now=%llu, current=%d, direction=%d, destination=%d, pickup=%d, dropoff=%d, queueSize=%zu\n",
+                now, current, direction ? 1 : 0, destination, pickupFloor, dropoffFloor, requestQueue.size());
+            OutputDebugString(dbg);
+
+            
+
+            if (!isPaused && destination != -1) {
                 if (direction && current < destination) current++;
                 else if (!direction && current > destination) current--;
+                             
 
                 InvalidateRect(hWnd, NULL, TRUE);
 
@@ -490,29 +568,85 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (current == pickupFloor) {
                         // Arrived at pickup floor, pause here
                         isPaused = true;
+
+                        for (int i = 0; i < peoplecount; ++i) {
+                            if (people[i].state == Waiting && people[i].floor == pickupFloor - 1) {
+                                people[i].state = InsideElevator;
+                                people[i].inElevator = true;
+                                people[i].floor = current - 1;
+                                people[i].x = globalright / 2; // center inside elevator
+                                people[i].y = globalbottom / 2 - 250 + 50 + 10 + (4 - people[i].floor) * (int)(0.2 * globalspacing);
+                                people[i].exitTime = 0;
+                                break;  // assuming only one person per pickup
+                            }
+                        }
+
                         KillTimer(hWnd, 1);  // Stop movement timer
                         SetTimer(hWnd, pauseTimerId, 1500, NULL);  // Pause 1.5 seconds
                     }
                     else if (current == dropoffFloor) {
                         // Arrived at dropoff floor, stop movement
+                        //isPaused = true;
+                        KillTimer(hWnd, 1);  // Stop movement timer
+                        for (int i = 0; i < peoplecount; ++i) {
+                            if (people[i].state == InsideElevator && people[i].floor == current - 1 && people[i].targetfloor == current - 1) {
+                                // Remove person by shifting array left
+                                for (int j = i; j < peoplecount - 1; ++j) {
+                                    people[j] = people[j + 1];
+                                }
+                                peoplecount--;
+                                i--; // check new person at this index
+                                OutputDebugString(L"Person exited elevator at dropoff floor.\n");
+                            }
+
+
+
+                            SetTimer(hWnd, pauseTimerId, 1500, NULL);
+
+
+
+
+                            pickupFloor = -1;
+                            dropoffFloor = -1;
+
+                            /*if (!requestQueue.empty()) {
+                                if (requestQueue.size() > 1) { requestQueue.pop(); }
+                                int code = requestQueue.front();
+                                requestQueue.pop();
+                                int from = code / 10;
+                                int to = code % 10;
+                                movement(from, to);
+                            }
+                            else {
+                                OutputDebugString(L"No more requests.\n");
+                            }*/
+                            InvalidateRect(hWnd, NULL, TRUE);
+                        }
+                    }
+                    
+                }
+                if (current == destination && !isPaused && destination != -1) {
+                    // Done
+                    if (requestQueue.empty()) {
                         KillTimer(hWnd, 1);
-                        pickupFloor = -1;
-                        dropoffFloor = -1;
                     }
                     else {
-                        // Done
-                        if (requestQueue.empty()) {
-                            KillTimer(hWnd, 1);
-                        }
-                        else {
-                            if (requestQueue.size() > 1) { requestQueue.pop(); }
-                            int code = requestQueue.front();
-                            requestQueue.pop();
-                            int from = code / 10;
-                            int to = code % 10;
-                            movement(from, to);
-                        }
+                        if (requestQueue.size() > 1) { requestQueue.pop(); }
+                        int code = requestQueue.front();
+                        requestQueue.pop();
+                        int from = code / 10;
+                        int to = code % 10;
+                        movement(from, to);
                     }
+                }
+            }
+
+            for (int i = 0; i < peoplecount; ++i) {
+                if (people[i].state == InsideElevator) {
+                    people[i].floor = current - 1;
+                    people[i].y = globalbottom / 2 - 250 + 50 + 10 + (4 - people[i].floor) * (int)(0.2 * globalspacing);
+
+      
                 }
             }
         }
@@ -520,19 +654,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             isPaused = false;
             KillTimer(hWnd, pauseTimerId);
 
+            /*if (current == dropoffFloor) {
+                for (int i = 0; i < peoplecount; ++i) {
+                    if (people[i].state == InsideElevator && people[i].floor == people[i].targetfloor) {
+                        // Remove person by shifting array left
+                        for (int j = i; j < peoplecount - 1; ++j) {
+                            people[j] = people[j + 1];
+                        }
+                        peoplecount--;
+                        i--;  // check the new person at this index
+                    }
+                }
+
+                pickupFloor = -1;
+                dropoffFloor = -1;
+            }*/
             // Set destination to dropoff and restart movement
-            destination = dropoffFloor;
+           destination = dropoffFloor;
 
             if (current < destination)
                 direction = true;
             else if (current > destination)
                 direction = false;
 
+                       
+            // If there are more requests, process next
+            /*if (!requestQueue.empty()) {
+                int code = requestQueue.front();
+                requestQueue.pop();
+                int from = code / 10;
+                int to = code % 10;
+                movement(from, to);
+            }
+            else KillTimer(hWnd, 1);*/
+            // Else remain idle (no timer restart)
+            SetTimer(hWnd, 1, 1000, NULL);
+            InvalidateRect(hWnd, NULL, TRUE);
+
+           
         }
 
-        SetTimer(hWnd, 1, 1000, NULL);
     
-
         break;
     case WM_DESTROY:
         KillTimer(hWnd, 1);
@@ -540,9 +702,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+        return 0;
     }
-    return 0;
-}
+
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
